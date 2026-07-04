@@ -1,41 +1,156 @@
 {
-  "name": "hsfdl-downloader",
-  "version": "1.0.0",
-  "description": "Premium High Speed File Downloader",
+  "name": "hsfdl",
+  "version": "2.0.0",
+  "description": "HSFDL — High Speed File Downloader. Premium desktop download manager powered by yt-dlp.",
   "main": "dist-electron/main/main.js",
+  "author": {
+    "name": "HSFDL Team",
+    "email": "support@hsfdl.app",
+    "url": "https://github.com/faaaaaaaaaah/HSFDL"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/faaaaaaaaaah/HSFDL.git"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "tsc -p tsconfig.main.json && vite build",
-    "package": "npm run build && electron-builder"
+    "build:debug": "cross-env NODE_ENV=development tsc -p tsconfig.main.json && vite build --mode development",
+    "build:release": "cross-env NODE_ENV=production tsc -p tsconfig.main.json && vite build --mode production",
+    "package": "npm run build:release && electron-builder --win",
+    "package:portable": "npm run build:release && electron-builder --win portable",
+    "package:installer": "npm run build:release && electron-builder --win nsis",
+    "package:all": "npm run build:release && electron-builder --win nsis portable zip",
+    "dist": "npm run package:all",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
+    "type-check": "tsc --noEmit",
+    "type-check:main": "tsc -p tsconfig.main.json --noEmit",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest",
+    "inject-buildinfo": "node scripts/inject-buildinfo.js",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
+    "framer-motion": "^12.42.2",
     "lucide-react": "^0.435.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
+    "@types/node": "^20.19.43",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.62.1",
+    "@typescript-eslint/parser": "^8.62.1",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^4.1.9",
     "electron": "^28.3.3",
     "electron-builder": "^24.9.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.4",
     "typescript": "^5.3.3",
-    "vite": "^5.0.12"
+    "vite": "^5.0.12",
+    "vitest": "^4.1.9"
   },
   "build": {
     "appId": "com.hsfdl.downloader",
-    "productName": "HSFDL Downloader",
+    "productName": "HSFDL",
+    "copyright": "Copyright © 2024-2026 HSFDL Team",
     "directories": {
-      "output": "dist-package"
+      "output": "dist-package",
+      "buildResources": "build"
     },
     "files": [
       "dist-electron/**/*",
       "dist/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "binaries/win",
+        "to": "binaries",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/*.{node,dll,exe}"
+    ],
     "win": {
-      "target": "portable"
-    }
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "publisherName": "HSFDL Team",
+      "verifyUpdateCodeSignature": false,
+      "signAndEditExecutable": false,
+      "fileAssociations": [
+        {
+          "ext": "hsfdl",
+          "name": "HSFDL Download List",
+          "description": "HSFDL Download Queue File",
+          "role": "Editor"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "HSFDL",
+      "include": "build/installer.nsh",
+      "runAfterFinish": true,
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/installerSidebar.bmp",
+      "menuCategory": "HSFDL",
+      "displayLanguageSelector": false,
+      "multiLanguageInstaller": false
+    },
+    "portable": {
+      "artifactName": "HSFDL_Portable_${version}.exe"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "faaaaaaaaaah",
+        "repo": "HSFDL",
+        "releaseType": "release"
+      }
+    ],
+    "artifactName": "${productName}_Setup_${version}.${ext}"
   }
 }

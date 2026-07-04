@@ -14,7 +14,22 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/renderer/src/*"],
+      "@components/*": ["src/renderer/src/components/*"],
+      "@hooks/*": ["src/renderer/src/hooks/*"],
+      "@stores/*": ["src/renderer/src/stores/*"],
+      "@services/*": ["src/renderer/src/services/*"],
+      "@types/*": ["src/renderer/src/types/*"],
+      "@utils/*": ["src/renderer/src/utils/*"],
+      "@assets/*": ["src/renderer/src/assets/*"]
+    }
   },
-  "include": ["src/renderer/src", "src/main/preload.ts"]
+  "include": [
+    "src/renderer/src",
+    "src/main/preload.ts",
+    "src/shared"
+  ]
 }
