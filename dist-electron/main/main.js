@@ -301,7 +301,7 @@ function startDownloadProcess(item) {
     }
     // Global settings
     if (appSettings.cookiesPath && fs.existsSync(appSettings.cookiesPath)) {
-        args.push('--cookiefile', appSettings.cookiesPath);
+        args.push('--cookies', appSettings.cookiesPath); // Bug 4: was --cookiefile (invalid flag)
     }
     if (appSettings.proxy) {
         args.push('--proxy', appSettings.proxy);
@@ -315,6 +315,12 @@ function startDownloadProcess(item) {
     // Output destination template
     const outTemplate = path.join(appSettings.downloadFolder, '%(title)s.%(ext)s');
     args.push('-o', outTemplate);
+    // Bug 3: Enable concurrent fragment downloading and larger buffer for accelerated speeds
+    args.push('--concurrent-fragments', '5');
+    args.push('--buffer-size', '64K');
+    // Bug 5: Use --no-part so yt-dlp writes directly (no .part suffix),
+    // allowing the kill-and-resume strategy to function correctly on re-invoke
+    args.push('--no-part');
     args.push(item.url);
     const cmd = ytDlpCommandBase[0];
     appendLog(`Running download cmd: ${cmd} ${args.join(' ')}`);
@@ -358,8 +364,38 @@ function startDownloadProcess(item) {
         }
     });
     dlProcess.stderr.on('data', (data) => {
-        errorLog += data.toString();
-        appendLog(`[Download Error UI] ${data.toString().trim()}`);
+        const line = data.toString();
+        errorLog += line;
+        appendLog(`[Download Error UI] ${line.trim()}`);
+        // Bug 8: yt-dlp writes progress to stderr in some modes — parse it here too
+        const progressRegex = /\[download\]\s+([\d.]+)\%\s+of\s+(\S+)\s+at\s+(\S+)\s+ETA\s+(\S+)/;
+        const match = line.match(progressRegex);
+        if (match) {
+            const pct = parseFloat(match[1]);
+            item.progress = pct;
+            const total = match[2].replace('~', '');
+            item.totalBytes = total;
+            item.speed = match[3];
+            item.eta = match[4];
+            try {
+                const totalNum = parseFloat(total);
+                if (!isNaN(totalNum) && totalNum > 0) {
+                    const unit = total.replace(/[\d.]/g, '').trim();
+                    const downloaded = (totalNum * pct / 100).toFixed(1);
+                    item.downloadedBytes = `${downloaded}${unit}`;
+                }
+            }
+            catch (_) { /* ignore parse errors */ }
+            broadcastQueue();
+        }
+        else {
+            const simpleRegex = /\[download\]\s+([\d.]+)\%/;
+            const simpleMatch = line.match(simpleRegex);
+            if (simpleMatch) {
+                item.progress = parseFloat(simpleMatch[1]);
+                broadcastQueue();
+            }
+        }
     });
     dlProcess.on('close', (code) => {
         activeProcesses.delete(item.id);
@@ -370,6 +406,10 @@ function startDownloadProcess(item) {
             item.eta = 'Done';
             appendLog(`Download finished: "${item.title}"`);
             addToHistory(item);
+            // Bug 7: Notify renderer so History view updates live
+            if (mainWindow) {
+                mainWindow.webContents.send('download-completed', item);
+            }
         }
         else {
             // If cancelled, keep cancelled status

@@ -51,6 +51,16 @@ const api = {
     return () => ipcRenderer.off('log-message', subscription);
   },
 
+  // Bug 7: Notify renderer when a download completes so History updates live
+  onDownloadCompleted: (callback: (item: any) => void) => {
+    const subscription = (_event: any, item: any) => callback(item);
+    ipcRenderer.on('download-completed', subscription);
+    return () => ipcRenderer.off('download-completed', subscription);
+  },
+  offDownloadCompleted: (callback: (item: any) => void) => {
+    ipcRenderer.removeAllListeners('download-completed');
+  },
+
   // Archive / History
   loadHistory: () => ipcRenderer.invoke('history-load'),
   clearHistory: () => ipcRenderer.invoke('history-clear'),

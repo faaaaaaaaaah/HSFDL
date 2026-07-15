@@ -62,7 +62,7 @@ interface ThemeContextType {
   updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
   selectFolder: () => Promise<string | null>;
   fetchVideoMetadata: (url: string, cookiesPath?: string) => Promise<any>;
-  startDownload: (url: string, options: any) => Promise<void>;
+  startDownload: (url: string, options: any, isBatch?: boolean) => Promise<void>;
   pauseDownload: (id: string) => Promise<void>;
   resumeDownload: (id: string) => Promise<void>;
   cancelDownload: (id: string) => Promise<void>;
@@ -149,24 +149,37 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setLogs((prev) => [...prev.slice(-300), msg]); // Keep last 300 logs
     });
 
+    // Bug 7: Re-fetch history whenever a download completes so the Library updates live
+    const handleDownloadCompleted = () => {
+      window.api.loadHistory().then((items: any[]) => setHistory(items)).catch(() => {});
+    };
+    window.api.onDownloadCompleted?.(handleDownloadCompleted);
+
     return () => {
       unsubscribeProgress();
       unsubscribeQueue();
       unsubscribeClipboard();
       unsubscribeLogs();
+      window.api.offDownloadCompleted?.(handleDownloadCompleted);
     };
   }, []);
 
   const addToast = (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
-    const id = Date.now().toString();
+    // Use crypto.randomUUID() to guarantee uniqueness even during rapid batch iterations
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, message, type }]);
     // Auto dismiss after 3 seconds
-    setTimeout(() => removeToast(id), 3000);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3000);
   };
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
+
 
   const updateSettings = async (newSettings: Partial<Settings>) => {
     if (!settings) return;
@@ -191,10 +204,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const startDownload = async (url: string, options: any) => {
+  const startDownload = async (url: string, options: any, isBatch = false) => {
     try {
       await window.api.startDownload(url, options);
-      addToast('Download added to queue.', 'success');
+      // Bug 1: Suppress per-item toast during batch downloads to avoid notification spam
+      if (!isBatch) {
+        addToast('Download added to queue.', 'success');
+      }
     } catch (err: any) {
       addToast(err.message || 'Failed to add download to queue.', 'error');
     }

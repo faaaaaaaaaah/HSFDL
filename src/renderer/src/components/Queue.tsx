@@ -68,7 +68,7 @@ const Queue: React.FC = () => {
       {queue.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
           {queue.map((item) => (
-            <div key={item.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '18px 24px', animation: 'fadeIn 0.25s ease' }}>
+            <div key={item.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '18px 24px', animation: 'fadeIn 0.25s ease', flexShrink: 0, minHeight: '70px' }}>
               
               {/* Left thumbnail/Icon */}
               <div style={{ width: '80px', height: '45px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--card-border)', backgroundColor: 'rgba(255, 255, 255, 0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

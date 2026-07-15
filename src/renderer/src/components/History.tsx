@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAppTheme, DownloadItem } from '../context/ThemeContext';
+import React, { useState } from 'react';
+import { useAppTheme } from '../context/ThemeContext';
 import { 
   Play, 
   FolderOpen, 
@@ -14,36 +14,23 @@ import {
 
 const History: React.FC = () => {
   const { 
+    history,
     clearHistory, 
     openFolder, 
     playFile
   } = useAppTheme();
 
-  const [historyItems, setHistoryItems] = useState<DownloadItem[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
-
-  const loadHistoryList = async () => {
-    try {
-      const items = await window.api.loadHistory();
-      setHistoryItems(items);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  useEffect(() => {
-    loadHistoryList();
-  }, []);
 
   const handleClear = async () => {
     if (confirm('Are you sure you want to clear your download library history? (This will not delete the actual files from your disk)')) {
       await clearHistory();
-      loadHistoryList();
+      // History in context is updated automatically via clearHistory()
     }
   };
 
   // Filter based on search query
-  const filteredItems = historyItems.filter((item) => 
+  const filteredItems = history.filter((item) => 
     item.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -66,7 +53,7 @@ const History: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
         <h1 className="view-title">Downloads Library</h1>
-        {historyItems.length > 0 && (
+        {history.length > 0 && (
           <button 
             className="btn secondary" 
             style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -80,7 +67,7 @@ const History: React.FC = () => {
       <p className="view-subtitle">Access previously downloaded video/audio assets and open them locally.</p>
 
       {/* Search Input Bar */}
-      {historyItems.length > 0 && (
+      {history.length > 0 && (
         <div className="input-group" style={{ marginBottom: '20px' }}>
           <span style={{ display: 'flex', alignItems: 'center', paddingLeft: '14px', color: 'var(--text-secondary)' }}>
             <Search size={16} />
@@ -99,7 +86,7 @@ const History: React.FC = () => {
       {filteredItems.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
           {filteredItems.map((item) => (
-            <div key={item.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '16px 20px', animation: 'fadeIn 0.25s ease' }}>
+            <div key={item.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '16px 20px', animation: 'fadeIn 0.25s ease', flexShrink: 0, minHeight: '70px' }}>
               
               {/* Media Icon Type */}
               <div style={{

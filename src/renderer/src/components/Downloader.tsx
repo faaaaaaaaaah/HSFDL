@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { useAppTheme } from "../context/ThemeContext";
 import { 
   Link, 
@@ -190,7 +190,7 @@ const Downloader: React.FC = () => {
         opts.title = rawName;
         opts.format = "Other";
       }
-      startDownload(link, opts);
+      startDownload(link, opts, true); // isBatch=true suppresses per-item toast spam
     });
 
     addToast(links.length + " download(s) added to queue.", "success");
