@@ -48,3 +48,4 @@ const api = {
     checkDependencies: () => electron_1.ipcRenderer.invoke('diagnostics-check'),
 };
 electron_1.contextBridge.exposeInMainWorld('api', api);
+//# sourceMappingURL=preload.js.map

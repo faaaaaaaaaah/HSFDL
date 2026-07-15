@@ -652,3 +652,4 @@ electron_1.ipcMain.handle('diagnostics-check', async () => {
     };
     return status;
 });
+//# sourceMappingURL=main.js.map
