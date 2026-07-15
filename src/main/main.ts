@@ -325,12 +325,11 @@ function startDownloadProcess(item: DownloadItem) {
   // Output destination template
   const outTemplate = path.join(appSettings.downloadFolder, '%(title)s.%(ext)s');
   args.push('-o', outTemplate);
-  // Bug 3: Enable concurrent fragment downloading and larger buffer for accelerated speeds
+  // Enable concurrent fragment downloading and larger buffer for accelerated speeds
   args.push('--concurrent-fragments', '5');
   args.push('--buffer-size', '64K');
-  // Bug 5: Use --no-part so yt-dlp writes directly (no .part suffix),
-  // allowing the kill-and-resume strategy to function correctly on re-invoke
-  args.push('--no-part');
+  // NOTE: --no-part is intentionally omitted so yt-dlp writes .part files,
+  // which allows accurate resume on re-invoke.
   args.push(item.url);
 
   const cmd = ytDlpCommandBase[0];
@@ -595,12 +594,15 @@ ipcMain.handle('downloader-start', (event, url, options) => {
 ipcMain.handle('downloader-pause', (event, id) => {
   const item = downloadQueue.find((i) => i.id === id);
   if (item && item.status === 'downloading') {
-    const process = activeProcesses.get(id);
-    if (process) {
+    const proc = activeProcesses.get(id);
+    if (proc && proc.pid) {
       item.status = 'paused';
-      process.kill(); // yt-dlp resumes from where it left off on file level natively!
+      // Kill the entire process tree (including concurrent fragment sub-processes)
+      exec(`taskkill /pid ${proc.pid} /T /F`, (err) => {
+        if (err) appendLog(`taskkill (pause) error: ${err.message}`);
+      });
       activeProcesses.delete(id);
-      appendLog(`Download paused (killed process): "${item.title}"`);
+      appendLog(`Download paused (killed process tree): "${item.title}"`);
     }
   }
   broadcastQueue();
@@ -620,15 +622,18 @@ ipcMain.handle('downloader-resume', (event, id) => {
 ipcMain.handle('downloader-cancel', (event, id) => {
   const item = downloadQueue.find((i) => i.id === id);
   if (item) {
-    const process = activeProcesses.get(id);
-    if (process) {
-      process.kill();
+    const proc = activeProcesses.get(id);
+    if (proc && proc.pid) {
+      // Kill the entire process tree (including concurrent fragment sub-processes)
+      exec(`taskkill /pid ${proc.pid} /T /F`, (err) => {
+        if (err) appendLog(`taskkill (cancel) error: ${err.message}`);
+      });
       activeProcesses.delete(id);
     }
     item.status = 'cancelled';
     item.speed = '0 B/s';
     item.eta = 'Cancelled';
-    appendLog(`Download cancelled: "${item.title}"`);
+    appendLog(`Download cancelled (killed process tree): "${item.title}"`);
   }
   broadcastQueue();
   processQueue();
